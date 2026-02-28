@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   ReferenceLine, ReferenceArea, Area, AreaChart, Line, PieChart, Pie,
@@ -851,6 +851,11 @@ function FactCheckTab() {
   const [challengeComplete, setChallengeComplete] = useState(false);
   const [showFloatingPill, setShowFloatingPill] = useState(true);
   const [pillDismissed, setPillDismissed] = useState(false);
+  const [bubbleExpanded, setBubbleExpanded] = useState(false);
+  const [streakAnimation, setStreakAnimation] = useState(null);
+  const firstCardRef = useRef(null);
+  const cardRefs = useRef({});
+  const resultsRef = useRef(null);
 
   const filtered = filter === "All" ? factClaims : factClaims.filter(c => c.category === filter);
   const avgRating = (factClaims.reduce((s, c) => s + c.rating, 0) / factClaims.length).toFixed(2);
@@ -930,12 +935,38 @@ function FactCheckTab() {
   const guessedCount = Object.keys(guesses).length;
   const revealedCount = Object.keys(revealed).length;
 
+  // Score calculations
+  const score = useMemo(() => {
+    let exact = 0, close = 0, off = 0, currentStreak = 0, maxStreak = 0;
+    factClaims.forEach(c => {
+      if (revealed[c.id] && guesses[c.id] !== undefined) {
+        const diff = Math.abs(guesses[c.id] - c.rating);
+        if (diff === 0) { exact++; currentStreak++; }
+        else if (diff <= 1) { close++; currentStreak++; }
+        else { off++; currentStreak = 0; }
+        maxStreak = Math.max(maxStreak, currentStreak);
+      }
+    });
+    const points = exact * 3 + close * 1;
+    const maxPoints = revealedCount * 3;
+    return { exact, close, off, streak: currentStreak, maxStreak, points, maxPoints, pct: maxPoints > 0 ? Math.round((points / maxPoints) * 100) : 0 };
+  }, [guesses, revealed, revealedCount]);
+
+  // Next unanswered claim
+  const nextUnanswered = useMemo(() => {
+    return factClaims.find(c => guesses[c.id] === undefined);
+  }, [guesses]);
+
   const startChallenge = useCallback(() => {
     setChallengeMode(true);
     setGuesses({});
     setRevealed({});
     setChallengeComplete(false);
     setShowFloatingPill(false);
+    setBubbleExpanded(false);
+    setTimeout(() => {
+      firstCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
   }, []);
 
   const exitChallenge = useCallback(() => {
@@ -947,14 +978,38 @@ function FactCheckTab() {
 
   const makeGuess = useCallback((claimId, guess) => {
     setGuesses(prev => ({ ...prev, [claimId]: guess }));
-    setTimeout(() => setRevealed(prev => ({ ...prev, [claimId]: true })), 300);
-  }, []);
+    setTimeout(() => {
+      setRevealed(prev => ({ ...prev, [claimId]: true }));
+      const claim = factClaims.find(c => c.id === claimId);
+      if (claim && guess === claim.rating) {
+        setStreakAnimation("exact");
+        setTimeout(() => setStreakAnimation(null), 1200);
+      } else if (claim && Math.abs(guess - claim.rating) <= 1) {
+        setStreakAnimation("close");
+        setTimeout(() => setStreakAnimation(null), 800);
+      }
+      // Auto-scroll to next unanswered
+      setTimeout(() => {
+        const updatedGuesses = { ...guesses, [claimId]: guess };
+        const nextClaim = factClaims.find(c => updatedGuesses[c.id] === undefined);
+        if (nextClaim && cardRefs.current[nextClaim.id]) {
+          cardRefs.current[nextClaim.id].scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 800);
+    }, 300);
+  }, [guesses]);
 
   useEffect(() => {
     if (challengeMode && revealedCount === totalClaims && revealedCount > 0) {
       setChallengeComplete(true);
+      // Auto-scroll to results
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 400);
     }
   }, [challengeMode, revealedCount, totalClaims]);
+
+  const streakEmoji = score.streak >= 5 ? "🔥🔥🔥" : score.streak >= 3 ? "🔥🔥" : score.streak >= 2 ? "🔥" : "";
 
   // Bias analysis
   const biasAnalysis = useMemo(() => {
@@ -982,7 +1037,7 @@ function FactCheckTab() {
     <>
       {/* Challenge Complete: Bias Reveal */}
       {challengeComplete && biasAnalysis && (
-        <div style={{ background: "linear-gradient(135deg, #1a1a3a 0%, #0d2818 100%)", borderRadius: 16, padding: 28, border: "1px solid #2a4a3a", marginBottom: 28 }}>
+        <div ref={resultsRef} style={{ background: "linear-gradient(135deg, #1a1a3a 0%, #0d2818 100%)", borderRadius: 16, padding: 28, border: "1px solid #2a4a3a", marginBottom: 28 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
             <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: "#34d399" }}>🧠 Your Bias Reveal</h2>
             <button onClick={exitChallenge} style={{ background: "#ffffff10", border: "1px solid #ffffff20", color: "#aaa", padding: "6px 14px", borderRadius: 8, cursor: "pointer", fontSize: 12 }}>
@@ -1008,6 +1063,20 @@ function FactCheckTab() {
             <div style={{ background: "#ffffff08", borderRadius: 10, padding: 14, textAlign: "center" }}>
               <div style={{ fontSize: 28, fontWeight: 800, color: "#a78bfa" }}>{biasAnalysis.avgGuess}</div>
               <div style={{ fontSize: 11, color: "#888" }}>Your Avg vs {biasAnalysis.avgActual} actual</div>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 20 }}>
+            <div style={{ background: "#ffffff08", borderRadius: 10, padding: 14, textAlign: "center" }}>
+              <div style={{ fontSize: 28, fontWeight: 800, color: "#c4b5fd" }}>{score.points}<span style={{ fontSize: 14, color: "#888" }}>/{score.maxPoints}</span></div>
+              <div style={{ fontSize: 11, color: "#888" }}>Total Score</div>
+            </div>
+            <div style={{ background: "#ffffff08", borderRadius: 10, padding: 14, textAlign: "center" }}>
+              <div style={{ fontSize: 28, fontWeight: 800, color: "#f97316" }}>{score.maxStreak}🔥</div>
+              <div style={{ fontSize: 11, color: "#888" }}>Best Streak</div>
+            </div>
+            <div style={{ background: "#ffffff08", borderRadius: 10, padding: 14, textAlign: "center" }}>
+              <div style={{ fontSize: 28, fontWeight: 800, color: "#dc2626" }}>{score.off}</div>
+              <div style={{ fontSize: 11, color: "#888" }}>Missed (off by 2+)</div>
             </div>
           </div>
           <div style={{ fontSize: 13, color: "#bbb", lineHeight: 1.6, marginBottom: 16 }}>
@@ -1071,6 +1140,7 @@ function FactCheckTab() {
             <div style={{ width: `${(revealedCount / totalClaims) * 100}%`, height: "100%", background: "linear-gradient(90deg, #7c3aed, #34d399)", borderRadius: 4, transition: "width 0.5s ease" }} />
           </div>
           <div style={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>{revealedCount}/{totalClaims}</div>
+          <div style={{ fontSize: 12, color: "#c4b5fd", fontWeight: 700, whiteSpace: "nowrap" }}>{score.points} pts</div>
           <button onClick={exitChallenge} style={{ background: "#ffffff10", border: "1px solid #ffffff20", color: "#888", padding: "4px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11 }}>Exit</button>
         </div>
       )}
@@ -1185,14 +1255,35 @@ function FactCheckTab() {
       </div>
 
       {/* Claims */}
-      {filtered.map(claim => {
+      {filtered.map((claim, i) => {
         const isGuessed = guesses[claim.id] !== undefined;
         const isRevealed = revealed[claim.id] || !challengeMode;
         const guess = guesses[claim.id];
         const diff = isGuessed ? guess - claim.rating : 0;
+        const isNextUp = challengeMode && !isGuessed && nextUnanswered?.id === claim.id;
 
         return (
-          <div key={claim.id} style={{ ...panelStyle, marginBottom: 16, transition: "all 0.3s ease" }}>
+          <div key={claim.id} ref={el => { cardRefs.current[claim.id] = el; if (i === 0) firstCardRef.current = el; }} style={{
+            ...panelStyle, marginBottom: 16, transition: "all 0.4s ease",
+            border: isNextUp ? "2px solid #a78bfa" : "1px solid #1e1e3a",
+            boxShadow: isNextUp ? "0 0 20px #7c3aed50, 0 0 40px #7c3aed25, inset 0 0 20px #7c3aed08" : "none",
+            opacity: challengeMode && isGuessed && isRevealed ? 0.7 : 1,
+          }}>
+            {/* Challenge status badge */}
+            {challengeMode && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <span style={{
+                  fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 10,
+                  background: isRevealed && isGuessed ? (Math.abs(diff) === 0 ? "#22c55e20" : Math.abs(diff) <= 1 ? "#eab30820" : "#dc262620") : isNextUp ? "#7c3aed20" : "#ffffff08",
+                  color: isRevealed && isGuessed ? (Math.abs(diff) === 0 ? "#22c55e" : Math.abs(diff) <= 1 ? "#eab308" : "#dc2626") : isNextUp ? "#a78bfa" : "#666",
+                  border: `1px solid ${isRevealed && isGuessed ? (Math.abs(diff) === 0 ? "#22c55e30" : Math.abs(diff) <= 1 ? "#eab30830" : "#dc262630") : isNextUp ? "#7c3aed40" : "#333"}`,
+                }}>
+                  {isRevealed && isGuessed ? (Math.abs(diff) === 0 ? "✨ EXACT" : Math.abs(diff) <= 1 ? "👌 CLOSE" : "❌ MISS") : isNextUp ? `CLAIM ${factClaims.indexOf(claim) + 1} · YOUR TURN` : `CLAIM ${factClaims.indexOf(claim) + 1}`}
+                </span>
+                {isNextUp && <span style={{ fontSize: 11, color: "#7c3aed", animation: "pulse 2s infinite" }}>← Rate this claim</span>}
+              </div>
+            )}
+
             {/* Quote */}
             <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
               <div style={{ fontSize: 28, lineHeight: 1, opacity: 0.3 }}>"</div>
@@ -1269,7 +1360,7 @@ function FactCheckTab() {
         );
       })}
 
-      {/* Floating pill */}
+      {/* Floating "Take the Challenge" pill */}
       {!challengeMode && !challengeComplete && !pillDismissed && showFloatingPill && (
         <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "linear-gradient(135deg, #7c3aed, #6366f1)", padding: "10px 24px", borderRadius: 30, boxShadow: "0 8px 32px #7c3aed40", display: "flex", alignItems: "center", gap: 12, zIndex: 100, cursor: "pointer" }}
           onClick={startChallenge}>
@@ -1278,6 +1369,73 @@ function FactCheckTab() {
           <button onClick={e => { e.stopPropagation(); setPillDismissed(true); }} style={{ background: "none", border: "none", color: "#ffffff60", cursor: "pointer", fontSize: 16, padding: "0 0 0 8px" }}>×</button>
         </div>
       )}
+
+      {/* Floating Status Bubble */}
+      {challengeMode && !challengeComplete && (() => {
+        const progress = revealedCount / totalClaims;
+        const circumference = 2 * Math.PI * 18;
+        const strokeDashoffset = circumference * (1 - progress);
+        return bubbleExpanded ? (
+          <div style={{
+            position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 100,
+            background: "linear-gradient(135deg, #4c1d95 0%, #3b1d8e 50%, #2e1065 100%)",
+            border: "2px solid #7c3aed", borderRadius: 20, padding: "16px 20px", minWidth: 300,
+            boxShadow: streakAnimation === "exact" ? "0 0 30px #22c55e60, 0 8px 32px #0008" : streakAnimation === "close" ? "0 0 30px #eab30860, 0 8px 32px #0008" : "0 8px 32px #0008",
+            backdropFilter: "blur(20px)", transition: "all 0.3s ease",
+          }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, marginBottom: 12 }}>
+              {[
+                { label: "Score", val: score.points, color: "#c4b5fd" },
+                { label: "Exact", val: score.exact, color: "#22c55e" },
+                { label: "Close", val: score.close, color: "#eab308" },
+                { label: "Streak", val: `${score.streak}${streakEmoji}`, color: "#f97316" },
+                { label: "Left", val: totalClaims - revealedCount, color: "#888" },
+              ].map(s => (
+                <div key={s.label} style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.val}</div>
+                  <div style={{ fontSize: 9, color: "#a0a0c0", fontWeight: 600 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ height: 6, background: "#ffffff10", borderRadius: 3, overflow: "hidden", marginBottom: 10 }}>
+              <div style={{ width: `${progress * 100}%`, height: "100%", background: "linear-gradient(90deg, #7c3aed, #34d399)", borderRadius: 3, transition: "width 0.5s ease" }} />
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {nextUnanswered && (
+                <button onClick={() => { cardRefs.current[nextUnanswered.id]?.scrollIntoView({ behavior: "smooth", block: "center" }); setBubbleExpanded(false); }}
+                  style={{ flex: 1, background: "linear-gradient(135deg, #7c3aed, #6366f1)", border: "none", color: "#fff", padding: "8px 12px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+                  Jump to next claim →
+                </button>
+              )}
+              <button onClick={() => setBubbleExpanded(false)}
+                style={{ background: "#ffffff10", border: "1px solid #ffffff20", color: "#a0a0c0", padding: "8px 12px", borderRadius: 8, cursor: "pointer", fontSize: 12 }}>
+                ▼
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div onClick={() => setBubbleExpanded(true)} style={{
+            position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 100,
+            background: "linear-gradient(135deg, #4c1d95 0%, #3b1d8e 50%, #2e1065 100%)",
+            border: "2px solid #7c3aed", borderRadius: 30, padding: "10px 20px",
+            boxShadow: streakAnimation === "exact" ? "0 0 30px #22c55e60, 0 8px 32px #0008" : streakAnimation === "close" ? "0 0 30px #eab30860, 0 8px 32px #0008" : "0 8px 32px #0008",
+            backdropFilter: "blur(20px)", display: "flex", alignItems: "center", gap: 14,
+            cursor: "pointer", transition: "all 0.3s ease",
+          }}>
+            <svg width="44" height="44" viewBox="0 0 44 44">
+              <circle cx="22" cy="22" r="18" fill="none" stroke="#ffffff15" strokeWidth="3" />
+              <circle cx="22" cy="22" r="18" fill="none" stroke="#7c3aed" strokeWidth="3"
+                strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round" transform="rotate(-90 22 22)" style={{ transition: "stroke-dashoffset 0.5s ease" }} />
+              <text x="22" y="24" textAnchor="middle" fill="#c4b5fd" fontSize="11" fontWeight="700">{revealedCount}/{totalClaims}</text>
+            </svg>
+            <span style={{ color: "#e8e8f0", fontSize: 14, fontWeight: 700 }}>{score.points} pts</span>
+            {score.streak >= 2 && <span style={{ fontSize: 14 }}>{streakEmoji} {score.streak}</span>}
+            <span style={{ color: "#a0a0c0", fontSize: 12, borderLeft: "1px solid #ffffff20", paddingLeft: 12 }}>{totalClaims - revealedCount} left</span>
+            <span style={{ color: "#a78bfa", fontSize: 12 }}>▲</span>
+          </div>
+        );
+      })()}
 
       <div style={{ textAlign: "center", color: "#444", fontSize: 11, paddingTop: 16 }}>
         Fact-checks compiled from multiple sources across the political spectrum · Ratings reflect consensus of cited sources · Feb 25, 2026
