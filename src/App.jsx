@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   ReferenceLine, ReferenceArea, Area, AreaChart, Line, PieChart, Pie,
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  ComposedChart, Scatter, Legend
 } from "recharts";
 
 /* ═══════════════════════════════════════════
@@ -33,6 +34,7 @@ const sourceLeanColors = { L: "#60a5fa", C: "#a78bfa", R: "#f87171", N: "#34d399
 const factClaims = [
   {
     id: 1,
+    sentenceIdx: 6,
     quote: "I had just inherited a nation in crisis...a stagnant economy...inflation at record levels.",
     category: "Economy",
     rating: 1,
@@ -45,6 +47,7 @@ const factClaims = [
   },
   {
     id: 2,
+    sentenceIdx: 13,
     quote: "In the past nine months, zero illegal aliens have been admitted to the United States.",
     category: "Immigration",
     rating: 2,
@@ -57,6 +60,7 @@ const factClaims = [
   },
   {
     id: 3,
+    sentenceIdx: 15,
     quote: "Deadly fentanyl across our border is down by a record 56% in one year.",
     category: "Crime",
     rating: 4,
@@ -69,6 +73,7 @@ const factClaims = [
   },
   {
     id: 4,
+    sentenceIdx: 16,
     quote: "The murder rate saw its single largest decline in recorded history...the lowest number in over 125 years.",
     category: "Crime",
     rating: 5,
@@ -81,6 +86,7 @@ const factClaims = [
   },
   {
     id: 5,
+    sentenceIdx: 18,
     quote: "The Biden administration...gave us the worst inflation in the history of our country.",
     category: "Inflation",
     rating: 1,
@@ -93,6 +99,7 @@ const factClaims = [
   },
   {
     id: 6,
+    sentenceIdx: 19,
     quote: "My administration has driven core inflation down to the lowest level in more than five years.",
     category: "Inflation",
     rating: 4,
@@ -105,6 +112,7 @@ const factClaims = [
   },
   {
     id: 7,
+    sentenceIdx: 20,
     quote: "And in the last three months of 2025, it was down to 1.7%.",
     category: "Inflation",
     rating: 2,
@@ -117,6 +125,7 @@ const factClaims = [
   },
   {
     id: 8,
+    sentenceIdx: 22,
     quote: "Gas is now below $2.30 a gallon in most states and in some places $1.99 a gallon.",
     category: "Energy",
     rating: 1,
@@ -130,6 +139,7 @@ const factClaims = [
   },
   {
     id: 9,
+    sentenceIdx: 23,
     quote: "I even saw $1.85 a gallon for gasoline [in Iowa].",
     category: "Energy",
     rating: 2,
@@ -142,6 +152,7 @@ const factClaims = [
   },
   {
     id: 10,
+    sentenceIdx: 26,
     quote: "The stock market has set 53 all-time record highs since the election.",
     category: "Economy",
     rating: 4,
@@ -154,6 +165,7 @@ const factClaims = [
   },
   {
     id: 11,
+    sentenceIdx: 30,
     quote: "In 12 months, I secured commitments for more than $18 trillion [in investment].",
     category: "Economy",
     rating: 1,
@@ -166,6 +178,7 @@ const factClaims = [
   },
   {
     id: 12,
+    sentenceIdx: 33,
     quote: "We have added 70,000 new construction jobs in just a very short period of time.",
     category: "Jobs",
     rating: 2,
@@ -177,6 +190,7 @@ const factClaims = [
   },
   {
     id: 13,
+    sentenceIdx: 38,
     quote: "More Americans are working today than at any time in the history of our country.",
     category: "Jobs",
     rating: 3,
@@ -190,6 +204,7 @@ const factClaims = [
   },
   {
     id: 14,
+    sentenceIdx: 72,
     quote: "Passing the largest tax cuts in American history.",
     category: "Taxes",
     rating: 1,
@@ -201,6 +216,7 @@ const factClaims = [
   },
   {
     id: 15,
+    sentenceIdx: 104,
     quote: "The price of eggs is down 60%.",
     category: "Inflation",
     rating: 5,
@@ -213,6 +229,7 @@ const factClaims = [
   },
   {
     id: 16,
+    sentenceIdx: 105,
     quote: "Chicken, butter, fruit, hotels, automobiles, rent is lower today than when I took office.",
     category: "Inflation",
     rating: 2,
@@ -225,6 +242,7 @@ const factClaims = [
   },
   {
     id: 17,
+    sentenceIdx: 99,
     quote: "Record-setting inflation that cost the typical family $34,000.",
     category: "Economy",
     rating: 3,
@@ -236,6 +254,7 @@ const factClaims = [
   },
   {
     id: 18,
+    sentenceIdx: 87,
     quote: "Countries that were ripping us off for decades are now paying us hundreds of billions [in tariffs].",
     category: "Trade",
     rating: 1,
@@ -248,6 +267,7 @@ const factClaims = [
   },
   {
     id: 19,
+    sentenceIdx: 41,
     quote: "We have lifted 2.4 million Americans — a record — off of food stamps.",
     category: "Economy",
     rating: 3,
@@ -259,6 +279,7 @@ const factClaims = [
   },
   {
     id: 20,
+    sentenceIdx: 117,
     quote: "Americans will now pay the lowest price anywhere in the world for drugs...from the highest price in the entire world to the lowest.",
     category: "Healthcare",
     rating: 2,
@@ -271,6 +292,7 @@ const factClaims = [
   },
   {
     id: 21,
+    sentenceIdx: 221,
     quote: "My first 10 months, I ended eight wars.",
     category: "Foreign Policy",
     rating: 2,
@@ -283,6 +305,7 @@ const factClaims = [
   },
   {
     id: 22,
+    sentenceIdx: 249,
     quote: "NATO countries have agreed to pay 5% of GDP for military defense rather than 2%.",
     category: "Foreign Policy",
     rating: 3,
@@ -294,6 +317,7 @@ const factClaims = [
   },
   {
     id: 23,
+    sentenceIdx: 251,
     quote: "Everything we send to Ukraine is sent through NATO and they pay us in full.",
     category: "Foreign Policy",
     rating: 2,
@@ -305,6 +329,7 @@ const factClaims = [
   },
   {
     id: 24,
+    sentenceIdx: 141,
     quote: "Minnesota, where members of the Somali community have pillaged an estimated $19 billion.",
     category: "Crime",
     rating: 1,
@@ -317,6 +342,7 @@ const factClaims = [
   },
   {
     id: 25,
+    sentenceIdx: 174,
     quote: "The cheating is rampant in our elections.",
     category: "Elections",
     rating: 1,
@@ -329,6 +355,7 @@ const factClaims = [
   },
   {
     id: 26,
+    sentenceIdx: 135,
     quote: "Since I took office, the typical 401(k) balance is up by at least $30,000.",
     category: "Economy",
     rating: 3,
@@ -340,6 +367,7 @@ const factClaims = [
   },
   {
     id: 27,
+    sentenceIdx: 185,
     quote: "No state can be allowed to rip children from their parents' arms and transition them to a new gender against the parents' will.",
     category: "Social Policy",
     rating: 1,
@@ -351,6 +379,7 @@ const factClaims = [
   },
   {
     id: 28,
+    sentenceIdx: 209,
     quote: "Crime in Washington is now at the lowest level ever recorded, murders down close to 100%.",
     category: "Crime",
     rating: 3,
@@ -362,6 +391,7 @@ const factClaims = [
   },
   {
     id: 29,
+    sentenceIdx: 143,
     quote: "We will actually have a balanced budget overnight [by eliminating fraud].",
     category: "Economy",
     rating: 1,
@@ -374,6 +404,7 @@ const factClaims = [
   },
   {
     id: 30,
+    sentenceIdx: 39,
     quote: "100% of all jobs created under my administration have been in the private sector.",
     category: "Jobs",
     rating: 3,
@@ -385,6 +416,7 @@ const factClaims = [
   },
   {
     id: 31,
+    sentenceIdx: 227,
     quote: "Under the cease fire, every single hostage, both living and dead, has been returned home.",
     category: "Foreign Policy",
     rating: 4,
@@ -396,6 +428,7 @@ const factClaims = [
   },
   {
     id: 32,
+    sentenceIdx: 222,
     quote: "Pakistan and India would have been a nuclear war...35 million people would have died if it were not for my involvement.",
     category: "Foreign Policy",
     rating: 2,
@@ -407,6 +440,7 @@ const factClaims = [
   },
   {
     id: 33,
+    sentenceIdx: 110,
     quote: "And even beef...is starting to come down significantly.",
     category: "Inflation",
     rating: 1,
@@ -418,6 +452,7 @@ const factClaims = [
   },
   {
     id: 34,
+    sentenceIdx: 225,
     quote: "Marco [Rubio] got 100% of the votes when he was in confirmation.",
     category: "Other",
     rating: 5,
@@ -429,6 +464,7 @@ const factClaims = [
   },
   {
     id: 35,
+    sentenceIdx: 198,
     quote: "Iryna [Zarutska] was killed by someone who 'came in through open borders.'",
     category: "Crime",
     rating: 1,
@@ -436,6 +472,152 @@ const factClaims = [
     sources: [
       { name: "Newsweek", url: "https://www.newsweek.com/donald-trumps-sotu-speech-fact-checked-11579247", lean: "C" },
       { name: "Local media reports", url: "", lean: "C" },
+    ]
+  },
+  {
+    id: 36,
+    sentenceIdx: 34,
+    quote: "American oil production is up by more than 600,000 barrels a day.",
+    category: "Energy",
+    rating: 3,
+    explanation: "EIA data shows US production went from ~13.2M bpd (2024 avg) to ~13.6M bpd (2025 record) — an increase of ~400,000 bpd, not 600,000. The trend was also already underway before Trump took office.",
+    sources: [
+      { name: "EIA", url: "https://www.eia.gov/todayinenergy/detail.php?id=67045", lean: "N" },
+      { name: "Reuters", url: "https://www.investing.com/news/commodities-news/eia-raises-us-oil-production-forecast-for-2025-3862613", lean: "C" },
+    ]
+  },
+  {
+    id: 37,
+    sentenceIdx: 36,
+    quote: "American natural gas production is at an all-time high.",
+    category: "Energy",
+    rating: 5,
+    explanation: "Confirmed by EIA: US dry gas production hit a record 107.6 bcfd in 2025 and is projected to reach 110.0 bcfd in 2026 — both all-time records.",
+    sources: [
+      { name: "EIA", url: "https://www.eia.gov/todayinenergy/detail.php?id=67166", lean: "N" },
+      { name: "BOE Report/Reuters", url: "https://boereport.com/2026/02/10/us-natgas-output-to-hit-record-high-in-2026-while-demand-holds-steady-eia-says/", lean: "C" },
+    ]
+  },
+  {
+    id: 38,
+    sentenceIdx: 232,
+    quote: "25,000 soldiers are dying each and every month.",
+    category: "Foreign Policy",
+    rating: 3,
+    explanation: "NATO's Rutte cited 20,000-25,000 Russians killed monthly. However, CSIS estimates ~325,000 total Russian deaths over 46 months (~7,000/month). The 25,000 figure aligns more with total monthly casualties (killed + wounded), not deaths alone. Trump's phrasing of 'dying' conflates casualties with fatalities.",
+    sources: [
+      { name: "CSIS", url: "https://www.csis.org/analysis/russias-grinding-war-ukraine", lean: "N" },
+      { name: "Fox News", url: "https://www.foxnews.com/world/russia-losing-massive-25000-troops-monthly-ukraine-war-grinds-on-nato-chief-mark-rutte-says", lean: "R" },
+      { name: "Al Jazeera", url: "https://www.aljazeera.com/news/2026/2/23/the-ukraine-war-in-numbers-people-territory-money", lean: "C" },
+    ]
+  },
+  {
+    id: 39,
+    sentenceIdx: 252,
+    quote: "Every branch of our Armed Forces is setting records for recruitment.",
+    category: "Jobs",
+    rating: 4,
+    explanation: "FY2025 was the best recruiting year in 15 years. All five active-duty branches met or exceeded goals (Army 102%, Navy 109%, Air Force 100%, Space Force 103%, Marines 100%). But 'setting records' slightly overstates it — these are best in 15 years, not all-time records. Army Reserve missed its goal at 75%.",
+    sources: [
+      { name: "Military Times", url: "https://www.militarytimes.com/news/your-military/2025/12/22/military-recruiting-off-to-strong-start-for-fiscal-2026-dod-says/", lean: "C" },
+      { name: "Pentagon/DOD", url: "https://www.globalsecurity.org/military/library/news/2025/12/mil-251222-dodnews02.htm", lean: "N" },
+      { name: "Washington Times", url: "https://www.washingtontimes.com/news/2025/dec/23/military-hits-best-recruiting-numbers-15-years-pentagon-says/", lean: "R" },
+    ]
+  },
+  {
+    id: 40,
+    sentenceIdx: 253,
+    quote: "Every service member recently received a warrior dividend of $1,776.",
+    category: "Other",
+    rating: 4,
+    explanation: "Confirmed: ~1.45M service members received a one-time $1,776 tax-free payment in December 2025. However, it was funded from a $2.9B Congressional housing appropriation (OBBBA), not tariff revenue as Trump implied. Only pay grades O-6 and below were eligible, and Coast Guard was initially excluded.",
+    sources: [
+      { name: "Military.com", url: "https://www.military.com/daily-news/investigations-and-features/2025/12/18/trump-promises-1776-warrior-dividend-troops-heres-what-service-members-need-know.html", lean: "C" },
+      { name: "CNN", url: "https://www.cnn.com/2025/12/17/politics/warrior-dividend-1776-military", lean: "L" },
+      { name: "Army.mil", url: "https://www.army.mil/article/290125/1776_warrior_dividend_tax_free_irs_confirms", lean: "N" },
+      { name: "Defense One", url: "https://www.defenseone.com/policy/2025/12/trump-rebrands-congressionally-approved-troop-housing-subsidy-warrior-dividend-bonus/410250/", lean: "C" },
+    ]
+  },
+  {
+    id: 41,
+    sentenceIdx: 29,
+    quote: "The last administration got less than $1 trillion in new investment...I secured commitments for more than $18 trillion.",
+    category: "Economy",
+    rating: 2,
+    explanation: "Biden's foreign direct investment per BEA data was under $1T — technically correct on that narrow metric. But Biden's private sector commitment tally exceeded $1T. Trump's $18T is contradicted by his own White House website showing $9.6T, which itself includes Biden-era announcements and non-binding pledges. Bloomberg reduced it to ~$7T in 'real' pledges. The comparison uses different standards for each president.",
+    sources: [
+      { name: "CBS News", url: "https://www.cbsnews.com/news/fact-check-state-of-the-union-2026/", lean: "C" },
+      { name: "FactCheck.org", url: "https://www.factcheck.org/2025/12/factchecking-trumps-economic-speech/", lean: "N" },
+      { name: "PolitiFact/Poynter", url: "https://www.poynter.org/fact-checking/2025/united-states-18-trillion-dollars-investments/", lean: "N" },
+      { name: "PBS", url: "https://www.pbs.org/newshour/politics/fact-checking-trumps-false-claims-ahead-of-the-state-of-the-union", lean: "C" },
+    ]
+  },
+  {
+    id: 42,
+    sentenceIdx: 130,
+    quote: "I signed executive order to ban large Wall Street investment firms from buying single family homes.",
+    category: "Economy",
+    rating: 4,
+    explanation: "The EO was signed January 20, 2026 — confirmed. It directs agencies to restrict federal programs from facilitating such sales and asks Congress to codify it. But calling it a 'ban' overstates its mechanism — it's a directive, not an outright prohibition. Experts called it 'fairly benign in practical terms' (AEI). Over 90% of investor-owned homes are held by small investors, not Wall Street.",
+    sources: [
+      { name: "White House", url: "https://www.whitehouse.gov/fact-sheets/2026/01/fact-sheet-president-donald-j-trump-stops-wall-street-from-competing-with-main-street-homebuyers/", lean: "N" },
+      { name: "CNBC", url: "https://www.cnbc.com/2026/01/20/trump-signs-order-to-restrict-wall-street-firms-from-buying-single-family-homes.html", lean: "C" },
+      { name: "TIME", url: "https://time.com/7355938/trump-wall-street-investors-housing-prices-affordability-order/", lean: "C" },
+      { name: "Fox Business", url: "https://www.foxbusiness.com/politics/trump-moves-block-wall-street-from-buying-single-family-homes-sweeping-new-executive-order", lean: "R" },
+    ]
+  },
+  {
+    id: 43,
+    sentenceIdx: 24,
+    quote: "Mortgage rates are the lowest in four years and falling fast.",
+    category: "Economy",
+    rating: 4,
+    explanation: "Rates hit ~5.99% in late February 2026 — the lowest since approximately September 2022 (~3.5 years ago, not quite 4). Rates were ~3.76% in February 2022 (actual four years ago). 'Falling fast' is fair — rates dropped from ~6.9% in late 2024 to ~6.0%. Close but slightly overstated.",
+    sources: [
+      { name: "Mortgage News Daily", url: "https://www.mortgagenewsdaily.com", lean: "N" },
+      { name: "Newsweek", url: "https://www.newsweek.com/donald-trump-housing-state-union-sotu-11579031", lean: "C" },
+      { name: "Inman", url: "https://www.inman.com/2026/02/25/despite-its-record-length-trumps-state-of-the-union-falls-short-on-housing-details/", lean: "C" },
+    ]
+  },
+  {
+    id: 44,
+    sentenceIdx: 25,
+    quote: "The annual cost of a typical new mortgage is down almost $5,000 just since I took office.",
+    category: "Economy",
+    rating: 3,
+    explanation: "Rates dropped from ~6.6-6.9% (Jan 2025) to ~5.99% (Feb 2026). On a median-priced home (~$400K with 20% down, $320K loan), that saves roughly $180-250/month, or ~$2,200-3,000/year — well short of $5,000. To hit $5,000 you'd need to cherry-pick a higher starting rate (like Oct 2023's 7.79% peak under Biden) or use an above-median home price.",
+    sources: [
+      { name: "Newsweek", url: "https://www.newsweek.com/donald-trump-housing-state-union-sotu-11579031", lean: "C" },
+      { name: "Inman", url: "https://www.inman.com/2026/02/25/despite-its-record-length-trumps-state-of-the-union-falls-short-on-housing-details/", lean: "C" },
+      { name: "NPR", url: "https://www.npr.org", lean: "L" },
+      { name: "Mortgage News Daily", url: "https://www.mortgagenewsdaily.com", lean: "N" },
+    ]
+  },
+  {
+    id: 45,
+    sentenceIdx: 35,
+    quote: "We just received from Venezuela more than 80 million barrels of oil.",
+    category: "Energy",
+    rating: 3,
+    explanation: "Oil is flowing from Venezuela since the Maduro capture in Jan 2026, including seized tankers. But 80M barrels in ~7 weeks would require ~1.6M bpd — approaching Venezuela's entire production capacity (~800-900K bpd). The figure hasn't been independently verified, and experts question the logistics.",
+    sources: [
+      { name: "Al Jazeera", url: "https://www.aljazeera.com/news/2026/2/25/trump-says-us-has-received-80m-barrels-of-venezuelan-oil-3rd-tanker-seized", lean: "C" },
+      { name: "Washington Times", url: "https://www.washingtontimes.com/news/2026/feb/24/trump-says-us-received-80-million-barrels-oil-venezuela/", lean: "R" },
+      { name: "BusinessToday", url: "https://www.businesstoday.in/world/us/story/weve-received-over-80-mn-oil-barrels-from-venezuela-trump-in-state-of-the-union-address-says-american-oil-production-at-all-time-high-517839-2026-02-25", lean: "C" },
+    ]
+  },
+  {
+    id: 46,
+    sentenceIdx: 125,
+    quote: "I have negotiated the new ratepayer protection pledge...no one's prices go up.",
+    category: "Energy",
+    rating: 3,
+    explanation: "The pledge exists: tech companies (Anthropic, Microsoft, OpenAI) publicly signed on, and Energy Secretary Wright confirmed 'all brand-name hyperscalers' agreed. However, the pledge is non-binding with no enforcement mechanism. Energy experts say it targets the wrong entities — utilities and state regulators control rates, not tech companies. Critics called it 'meaningless' and a 'theatrical stunt.'",
+    sources: [
+      { name: "Axios", url: "https://www.axios.com/2026/02/25/trump-data-center-electricity-ratepayer-protection-pledge", lean: "C" },
+      { name: "Fox News", url: "https://www.foxnews.com/tech/what-trump-rate-payer-protection-pledge-means-you", lean: "R" },
+      { name: "Common Dreams", url: "https://www.commondreams.org/news/ai-data-centers-electricity-demand", lean: "L" },
+      { name: "Harvard Electricity Law Initiative", url: "https://eelp.law.harvard.edu/", lean: "N" },
     ]
   },
 ];
@@ -637,6 +819,30 @@ function SentimentTab() {
 /* ═══════════════════════════════════════════
    FACT CHECK TAB
    ═══════════════════════════════════════════ */
+
+const TimelineTooltip = ({ active, payload }) => {
+  if (!active || !payload?.length) return null;
+  const d = payload[0]?.payload;
+  if (!d) return null;
+  const sec = speechSections.find(s => (d.idx - 1) >= s.start && (d.idx - 1) < s.end);
+  return (
+    <div style={{ background: "#1a1a2e", border: "1px solid #333", borderRadius: 8, padding: "10px 14px", maxWidth: 360, fontSize: 12, color: "#e0e0e0", lineHeight: 1.5 }}>
+      <div style={{ fontWeight: 700, color: "#8b8baa", marginBottom: 4 }}>
+        Sentence #{d.idx} {sec && <span style={{ color: "#666" }}>· {sec.label}</span>}
+      </div>
+      <div style={{ color: "#60a5fa", marginBottom: 2 }}>Sentiment: {d.rollingAvg > 0 ? "+" : ""}{d.rollingAvg?.toFixed(3)}</div>
+      {d.factRating && (
+        <div style={{ marginTop: 6, padding: "6px 8px", background: "#ffffff08", borderRadius: 6 }}>
+          <div style={{ color: ratingColors[d.factRating], fontWeight: 700, marginBottom: 2 }}>
+            {ratingEmoji[d.factRating]} {ratingLabels[d.factRating]} ({d.factRating}/5)
+          </div>
+          <div style={{ color: "#aaa", fontSize: 11 }}>{d.claimCategory}: "{d.claimQuote?.substring(0, 80)}..."</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 function FactCheckTab() {
   const [filter, setFilter] = useState("All");
   const [challengeMode, setChallengeMode] = useState(false);
@@ -656,6 +862,67 @@ function FactCheckTab() {
       const avg = claims.reduce((s, c) => s + c.rating, 0) / claims.length;
       return { category: cat, avg: parseFloat(avg.toFixed(2)), count: claims.length };
     }).sort((a, b) => a.avg - b.avg);
+  }, []);
+
+
+
+  // Timeline data: merge sentiment rolling average with fact claim positions
+  const timelineData = useMemo(() => {
+    const WINDOW = 10;
+    return compounds.map((score, i) => {
+      const idx = i + 1;
+      const start = Math.max(0, i - Math.floor(WINDOW / 2));
+      const end = Math.min(compounds.length, i + Math.ceil(WINDOW / 2));
+      const windowSlice = compounds.slice(start, end);
+      const rollingAvg = windowSlice.reduce((a, b) => a + b, 0) / windowSlice.length;
+      const claim = factClaims.find(c => c.sentenceIdx === idx);
+      return {
+        idx,
+        score,
+        rollingAvg: parseFloat(rollingAvg.toFixed(3)),
+        factRating: claim ? claim.rating : null,
+        claimId: claim ? claim.id : null,
+        claimQuote: claim ? claim.quote : null,
+        claimCategory: claim ? claim.category : null,
+      };
+    });
+  }, []);
+
+  // Correlation statistics
+  const correlationStats = useMemo(() => {
+    const claimsWithSentiment = factClaims.filter(c => c.sentenceIdx).map(c => {
+      const idx = c.sentenceIdx - 1;
+      const WINDOW = 10;
+      const start = Math.max(0, idx - Math.floor(WINDOW / 2));
+      const end = Math.min(compounds.length, idx + Math.ceil(WINDOW / 2));
+      const windowSlice = compounds.slice(start, end);
+      const localSentiment = windowSlice.reduce((a, b) => a + b, 0) / windowSlice.length;
+      return { ...c, localSentiment };
+    });
+    const negative = claimsWithSentiment.filter(c => c.localSentiment < -0.05);
+    const positive = claimsWithSentiment.filter(c => c.localSentiment > 0.05);
+    const negAvg = negative.length ? (negative.reduce((s, c) => s + c.rating, 0) / negative.length).toFixed(1) : "N/A";
+    const posAvg = positive.length ? (positive.reduce((s, c) => s + c.rating, 0) / positive.length).toFixed(1) : "N/A";
+    const falseClaimsTotal = claimsWithSentiment.filter(c => c.rating <= 2).length;
+    const falseInNegative = negative.filter(c => c.rating <= 2).length;
+    const falseInNeg = falseClaimsTotal > 0 ? Math.round((falseInNegative / falseClaimsTotal) * 100) : 0;
+    const mostFalseSection = (() => {
+      const sectionRatings = speechSections.map(sec => {
+        const claims = claimsWithSentiment.filter(c => c.sentenceIdx >= sec.start + 1 && c.sentenceIdx <= sec.end);
+        const avg = claims.length ? claims.reduce((s, c) => s + c.rating, 0) / claims.length : 5;
+        return { label: sec.label, avg, count: claims.length };
+      }).filter(s => s.count > 0);
+      return sectionRatings.sort((a, b) => a.avg - b.avg)[0]?.label || "N/A";
+    })();
+    let insight;
+    if (parseFloat(negAvg) < parseFloat(posAvg) - 0.5) {
+      insight = `Claims made during negative/attacking passages averaged ${negAvg}/5, while claims during positive passages averaged ${posAvg}/5. This suggests a pattern: when the rhetoric turned combative, the factual accuracy tended to drop. The least accurate claims clustered in the "${mostFalseSection}" section.`;
+    } else if (parseFloat(negAvg) > parseFloat(posAvg) + 0.5) {
+      insight = `Interestingly, claims during negative passages (${negAvg}/5) were more accurate than during positive ones (${posAvg}/5). The celebratory claims appear to involve more exaggeration.`;
+    } else {
+      insight = `Factual accuracy was relatively consistent regardless of emotional tone — negative passages averaged ${negAvg}/5 and positive ones ${posAvg}/5. The least accurate claims appeared in the "${mostFalseSection}" section.`;
+    }
+    return { negAvg, posAvg, falseInNeg, mostFalseSection, insight };
   }, []);
 
   // Challenge logic
