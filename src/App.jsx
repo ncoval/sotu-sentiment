@@ -1075,6 +1075,62 @@ function FactCheckTab() {
         </div>
       )}
 
+      {/* ═══ TRUTH & TONE TIMELINE ═══ */}
+      <div style={panelStyle}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, color: "#e0e0e0", marginBottom: 4 }}>Truth & Tone Timeline</h3>
+        <p style={{ fontSize: 12, color: "#666", marginBottom: 16 }}>Fact ratings overlaid on the speech's emotional arc. Blue line = 10-sentence sentiment rolling average. Dots = fact-check ratings (color = accuracy).</p>
+        <ResponsiveContainer width="100%" height={320}>
+          <ComposedChart data={timelineData} margin={{ top: 10, right: 40, left: 0, bottom: 10 }}>
+            {speechSections.map((sec, i) => (
+              <ReferenceArea key={i} x1={sec.start + 1} x2={sec.end} fill={sectionColors[i]} stroke={sectionBorderColors[i]} strokeWidth={0.5} />
+            ))}
+            <XAxis dataKey="idx" tick={{ fontSize: 10, fill: "#555" }} tickLine={false} label={{ value: "Sentence #", position: "insideBottom", offset: -4, fontSize: 10, fill: "#666" }} />
+            <YAxis yAxisId="sentiment" domain={[-1, 1]} tick={{ fontSize: 10, fill: "#555" }} tickLine={false} label={{ value: "Sentiment", angle: -90, position: "insideLeft", offset: 10, fontSize: 10, fill: "#60a5fa" }} />
+            <YAxis yAxisId="rating" orientation="right" domain={[0.5, 5.5]} ticks={[1,2,3,4,5]} tick={{ fontSize: 10, fill: "#555" }} tickLine={false} label={{ value: "Fact Rating", angle: 90, position: "insideRight", offset: 10, fontSize: 10, fill: "#34d399" }} />
+            <Tooltip content={<TimelineTooltip />} />
+            <Line yAxisId="sentiment" type="monotone" dataKey="rollingAvg" stroke="#3b82f6" strokeWidth={1.5} dot={false} opacity={0.6} name="Sentiment (rolling avg)" />
+            <Scatter yAxisId="rating" dataKey="factRating" name="Fact Rating" shape={(props) => {
+              const { cx, cy, payload } = props;
+              if (!payload.factRating) return null;
+              const color = ratingColors[payload.factRating] || "#888";
+              return <circle cx={cx} cy={cy} r={7} fill={color} stroke="#0d0d1a" strokeWidth={2} style={{ cursor: "pointer" }} />;
+            }} />
+          </ComposedChart>
+        </ResponsiveContainer>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 8, flexWrap: "wrap" }}>
+          {[1,2,3,4,5].map(r => (
+            <span key={r} style={{ fontSize: 11, color: ratingColors[r], display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ width: 10, height: 10, borderRadius: "50%", background: ratingColors[r], display: "inline-block" }} />
+              {ratingLabels[r]}
+            </span>
+          ))}
+          <span style={{ fontSize: 11, color: "#3b82f6", display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ width: 16, height: 2, background: "#3b82f6", display: "inline-block" }} />
+            Sentiment
+          </span>
+        </div>
+      </div>
+
+      {/* ═══ CORRELATION INSIGHT ═══ */}
+      <div style={{ ...panelStyle, background: "linear-gradient(135deg, #13132a 0%, #1a1030 100%)" }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#a78bfa", marginBottom: 12 }}>📊 Correlation: Sentiment vs. Truth</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+          <div style={{ background: "#ffffff08", borderRadius: 10, padding: 14, textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: correlationStats.negAvg <= 2.5 ? "#f97316" : "#eab308" }}>{correlationStats.negAvg}</div>
+            <div style={{ fontSize: 10, color: "#888" }}>Avg rating when<br/>sentiment is negative</div>
+          </div>
+          <div style={{ background: "#ffffff08", borderRadius: 10, padding: 14, textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: correlationStats.posAvg >= 3.5 ? "#22c55e" : "#eab308" }}>{correlationStats.posAvg}</div>
+            <div style={{ fontSize: 10, color: "#888" }}>Avg rating when<br/>sentiment is positive</div>
+          </div>
+          <div style={{ background: "#ffffff08", borderRadius: 10, padding: 14, textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#dc2626" }}>{correlationStats.falseInNeg}%</div>
+            <div style={{ fontSize: 10, color: "#888" }}>False/Mostly False claims<br/>during negative passages</div>
+          </div>
+        </div>
+        <p style={{ fontSize: 12, color: "#999", marginTop: 12, lineHeight: 1.6 }}>{correlationStats.insight}</p>
+      </div>
+
       {/* Charts Row */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
         <div style={panelStyle}>
